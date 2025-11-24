@@ -2,6 +2,7 @@
 
 ## 2025-11-24
 
+- created CONTRIBUTING.md with guidelines for commits (Conventional Commits), branch strategy, PR process, code style (TypeScript, NestJS, React), and testing requirements.
 - created professional README.md with overview, features, API documentation, tech stack, installation, running instructions, project structure, and future improvements.
 - integrated `web` with `api`: updated `notesService` to make HTTP requests to NestJS API endpoints.
 - enabled CORS in NestJS API for frontend integration.
