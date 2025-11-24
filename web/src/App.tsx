@@ -24,8 +24,9 @@ function App() {
   }, []);
 
   const handleCreateNote = async (dto: CreateNoteDto) => {
-    const newNote = await notesService.createNote(dto);
-    setNotes(prev => [...prev, newNote]);
+    await notesService.createNote(dto);
+    // Reload notes from API to ensure consistency
+    await loadNotes();
   };
 
   return (
