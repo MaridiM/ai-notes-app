@@ -1,82 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Note, CreateNoteDto } from './types';
+import { notesService } from './services/notes.service';
+import { NoteForm } from './components/NoteForm/NoteForm';
+import { NoteList } from './components/NoteList/NoteList';
 
 function App() {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [formData, setFormData] = useState<CreateNoteDto>({
-    title: '',
-    content: '',
-  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.title.trim() || !formData.content.trim()) {
-      return;
+  const loadNotes = async () => {
+    try {
+      const loadedNotes = await notesService.getNotes();
+      setNotes(loadedNotes);
+    } catch (error) {
+      console.error('Failed to load notes:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    const newNote: Note = {
-      id: notes.length + 1,
-      title: formData.title,
-      content: formData.content,
-      createdAt: new Date().toISOString(),
-    };
-
-    setNotes([...notes, newNote]);
-    setFormData({ title: '', content: '' });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  const handleCreateNote = async (dto: CreateNoteDto) => {
+    const newNote = await notesService.createNote(dto);
+    setNotes(prev => [...prev, newNote]);
   };
 
   return (
     <div>
       <h1>Notes App</h1>
       
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="title">Title:</label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="content">Content:</label>
-          <textarea
-            id="content"
-            name="content"
-            value={formData.content}
-            onChange={handleChange}
-          />
-        </div>
-        
-        <button type="submit">Add Note</button>
-      </form>
+      <NoteForm onSubmit={handleCreateNote} />
 
       <div>
         <h2>Notes</h2>
-        {notes.length === 0 ? (
-          <p>No notes yet</p>
+        {isLoading ? (
+          <p>Loading...</p>
         ) : (
-          <ul>
-            {notes.map(note => (
-              <li key={note.id}>
-                <h3>{note.title}</h3>
-                <p>{note.content}</p>
-                <small>{new Date(note.createdAt).toLocaleString()}</small>
-              </li>
-            ))}
-          </ul>
+          <NoteList notes={notes} />
         )}
       </div>
     </div>

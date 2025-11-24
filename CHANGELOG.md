@@ -1,5 +1,11 @@
 # Changelog
 
+## 2025-11-25
+
+- improved React component structure: split into `NoteForm`, `NoteList`, `NoteItem` components.
+- refactored with async/await: added `notesService` with async methods, updated components to use async operations.
+- created minimal React + TypeScript app `web` with form (title, content), "Add Note" button, and notes list.
+
 ## 2025-11-24
 
 - scaffoled minimal NestJS project `api`.
