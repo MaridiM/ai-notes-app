@@ -1,0 +1,304 @@
+# NestJS Key Concepts Explained
+
+This document explains the core concepts used in this project: **Decorators**, **Dependency Injection (DI)**, and **DTOs**.
+
+## 📋 Table of Contents
+1. [Decorators](#decorators)
+2. [Dependency Injection (DI)](#dependency-injection-di)
+3. [DTOs (Data Transfer Objects)](#dtos-data-transfer-objects)
+4. [How It All Works Together](#how-it-all-works-together)
+
+---
+
+## 🎨 Decorators
+
+Decorators are special functions that modify classes, methods, or properties. In NestJS, they're used extensively to configure your application.
+
+### Common NestJS Decorators
+
+#### `@Injectable()`
+Marks a class as a provider that can be injected into other classes.
+
+```typescript
+@Injectable()
+export class NotesService {
+  // This class can now be injected into controllers or other services
+}
+```
+
+**What it does:**
+- Tells NestJS: "This class can be used as a dependency"
+- Enables automatic instantiation and lifecycle management
+- Creates a singleton by default (one instance shared across the app)
+
+#### `@Controller('route-prefix')`
+Marks a class as a controller that handles HTTP requests.
+
+```typescript
+@Controller('notes')
+export class NotesController {
+  // All routes here will be prefixed with /notes
+}
+```
+
+**What it does:**
+- Registers the class as an HTTP request handler
+- The string parameter sets the route prefix
+- Methods inside become HTTP endpoints
+
+#### `@Get()`, `@Post()`, `@Put()`, `@Delete()`
+Maps methods to HTTP verbs.
+
+```typescript
+@Get()        // GET /notes
+getNotes() { }
+
+@Post()       // POST /notes
+createNote() { }
+```
+
+#### `@Body()`
+Extracts and validates the request body.
+
+```typescript
+@Post()
+createNote(@Body() payload: CreateNoteDto) {
+  // payload is automatically extracted from request body
+  // and validated against CreateNoteDto type
+}
+```
+
+#### `@Module()`
+Organizes related functionality into modules.
+
+```typescript
+@Module({
+  controllers: [NotesController],
+  providers: [NotesService],
+})
+export class NotesModule {}
+```
+
+**What it does:**
+- Groups related controllers and services
+- Defines what can be injected where
+- Makes the application modular and organized
+
+---
+
+## 🔌 Dependency Injection (DI)
+
+Dependency Injection is a design pattern where objects receive their dependencies from an external source rather than creating them internally.
+
+### Why Use DI?
+
+**Without DI (Bad):**
+```typescript
+class NotesController {
+  private service = new NotesService(); // Controller creates its own service
+  // Problems:
+  // - Tight coupling (hard to test)
+  // - Can't easily swap implementations
+  // - Controller is responsible for service lifecycle
+}
+```
+
+**With DI (Good):**
+```typescript
+class NotesController {
+  constructor(private readonly notesService: NotesService) {
+    // NestJS automatically provides NotesService
+    // - Loose coupling
+    // - Easy to test (can inject mock)
+    // - Single responsibility
+  }
+}
+```
+
+### How NestJS DI Works
+
+1. **Declare Dependencies**: List them in the constructor
+   ```typescript
+   constructor(private readonly notesService: NotesService) {}
+   ```
+
+2. **Register Providers**: Add to module's `providers` array
+   ```typescript
+   @Module({
+     providers: [NotesService], // "This can be injected"
+   })
+   ```
+
+3. **NestJS Resolves**: Automatically creates and injects instances
+   - Looks up `NotesService` in the module
+   - Creates instance (or reuses singleton)
+   - Injects into `NotesController`
+
+### DI Benefits
+
+✅ **Testability**: Easy to mock dependencies in tests
+✅ **Flexibility**: Can swap implementations without changing code
+✅ **Maintainability**: Clear dependencies, easier to understand
+✅ **Separation of Concerns**: Each class has one responsibility
+
+### Example Flow
+
+```
+1. Request comes to NotesController
+2. NestJS sees constructor needs NotesService
+3. NestJS checks NotesModule for NotesService
+4. Creates NotesService instance (if not exists)
+5. Injects it into NotesController
+6. Controller can now use the service
+```
+
+---
+
+## 📦 DTOs (Data Transfer Objects)
+
+DTOs define the structure of data transferred between layers of your application.
+
+### What is a DTO?
+
+A DTO is a simple object that describes:
+- What data is expected
+- The shape/structure of that data
+- Type information for validation
+
+```typescript
+export interface CreateNoteDto {
+  title: string;
+  content: string;
+}
+```
+
+### Why Use DTOs?
+
+1. **Type Safety**: TypeScript ensures data matches the expected structure
+2. **Validation**: Can validate incoming data automatically
+3. **Documentation**: Clearly shows what data is expected
+4. **Security**: Prevents exposing internal data structures
+5. **Separation**: API contract is separate from domain models
+
+### DTO vs Domain Model
+
+**DTO (What comes from API):**
+```typescript
+interface CreateNoteDto {
+  title: string;
+  content: string;
+  // No ID, no timestamp - client doesn't provide these
+}
+```
+
+**Domain Model (What we store):**
+```typescript
+interface Note {
+  id: number;           // Generated by server
+  title: string;
+  content: string;
+  createdAt: string;    // Generated by server
+}
+```
+
+### DTO Flow
+
+```
+Client Request (JSON)
+{
+  "title": "My Note",
+  "content": "Note content"
+}
+        ↓
+NestJS validates against CreateNoteDto
+- Checks structure matches
+- Rejects if invalid
+        ↓
+Controller receives validated CreateNoteDto
+        ↓
+Service converts DTO to domain model (Note)
+- Adds ID
+- Adds timestamp
+        ↓
+Stores in database/memory
+```
+
+### Best Practices
+
+✅ Keep DTOs simple (just data, no methods)
+✅ One DTO per operation (CreateNoteDto, UpdateNoteDto)
+✅ Don't expose internal fields (IDs, timestamps) in create DTOs
+✅ Use interfaces for simple DTOs
+✅ Use classes with validation decorators for complex validation
+
+---
+
+## 🔄 How It All Works Together
+
+### Complete Request Flow
+
+```
+1. HTTP Request: POST /notes
+   Body: { "title": "Test", "content": "Note" }
+        ↓
+2. @Controller('notes') receives request
+   @Post() method is called
+        ↓
+3. @Body() extracts and validates request body
+   Validates against CreateNoteDto
+        ↓
+4. Constructor injection provides NotesService
+   NestJS DI container resolves dependency
+        ↓
+5. Controller calls service.createNote(dto)
+        ↓
+6. Service creates Note domain model
+   Adds ID and timestamp
+        ↓
+7. Service stores note in memory
+        ↓
+8. Returns Note to controller
+        ↓
+9. Controller returns Note
+   NestJS serializes to JSON
+        ↓
+10. HTTP Response: 200 OK
+    Body: { "id": 1, "title": "Test", "content": "Note", "createdAt": "..." }
+```
+
+### File Structure
+
+```
+src/
+├── notes/
+│   ├── dto/
+│   │   └── create-note.dto.ts    # DTO definition
+│   ├── notes.controller.ts        # @Controller, handles HTTP
+│   ├── notes.service.ts           # @Injectable, business logic
+│   ├── notes.module.ts            # @Module, organizes everything
+│   ├── notes.controller.spec.ts   # Controller tests
+│   └── notes.service.spec.ts      # Service tests
+├── app.module.ts                  # Root module, imports NotesModule
+└── notes.types.ts                 # Domain models (Note interface)
+```
+
+### Key Relationships
+
+- **Module** → Registers controllers and providers
+- **Controller** → Uses `@Controller`, `@Get`, `@Post` decorators
+- **Service** → Uses `@Injectable` decorator
+- **DTO** → Defines data structure for validation
+- **DI** → Connects everything together automatically
+
+---
+
+## 🎓 Summary
+
+| Concept | Purpose | Example |
+|---------|---------|---------|
+| **Decorators** | Configure classes and methods | `@Controller('notes')` |
+| **DI** | Automatically provide dependencies | `constructor(private service: NotesService)` |
+| **DTOs** | Define data structure and validation | `interface CreateNoteDto { title: string }` |
+
+All three work together to create a clean, testable, and maintainable NestJS application!
+
